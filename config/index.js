@@ -33,6 +33,16 @@ module.exports = {
         // (https://github.com/webpack/css-loader#sourcemaps)
         // In our experience, they generally work as expected,
         // just be aware of this issue when enabling this option.
-        cssSourceMap: false
+        cssSourceMap: false,
+        proxyTable: {
+            // 配置代理规则（以 '/api' 为前缀的请求会被代理）
+            '/api': {
+                target: 'http://192.168.3.19:8082', // 后端接口的实际地址
+                changeOrigin: true, // 允许跨域
+                pathRewrite: {
+                    '^/api': '' // 如果后端接口没有 '/api' 前缀，就替换为空（根据实际情况调整）
+                }
+            }
+        },
     }
 }
