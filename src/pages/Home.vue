@@ -189,7 +189,7 @@
         data () {
             return {
                 openNames: [this.$route.matched[0].name],
-                curUserName : sessionStorage.getItem('user').replace(/\"/g, ""),
+                curUserName : localStorage.getItem('userName').replace(/\"/g, ""),
                 modeType: "vertical",
                 spanLeft: 5,
                 spanRight: 19,
@@ -242,6 +242,9 @@
                 this.modal1 = true;    
             },
             logout() {
+                localStorage.removeItem("admin_token")
+                localStorage.removeItem("userInfo")
+                localStorage.removeItem("userName")
                 this.$router.push('/login');
             },
             comfirmModifyPS() {

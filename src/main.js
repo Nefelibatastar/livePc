@@ -9,6 +9,14 @@ import Mock from './mock'
 import iview from 'iview'
 import 'iview/dist/styles/iview.css'
 import VueClipboard from 'vue-clipboard2'
+import ElementUI from "element-ui";
+// 引入 Element UI 中文语言包
+// import "element-ui/lib/theme-chalk/index.css";
+import locale from "element-ui/lib/locale/lang/zh-CN";
+import api from './api/api';
+Vue.prototype.$api = api;
+// 使用中文语言包
+Vue.use(ElementUI, { locale });
 
 Mock.bootstrap();
 
@@ -23,20 +31,15 @@ const router = new VueRouter({
 
 router.beforeEach((to, from, next) => {
     if (to.path == '/login') {
-        sessionStorage.removeItem('user');
+        localStorage.removeItem('userInfo');
     }
-    let user = JSON.parse(sessionStorage.getItem('user'));
-    if (!user && to.path != '/login') {
+    let userInfo = JSON.parse(localStorage.getItem('userInfo'));
+    if (!userInfo && to.path != '/login') {
         next({ path: '/login' })
     } else {
         next()
     }
 })
-
-//router.afterEach(transition => {
-//NProgress.done();
-//});
-
 new Vue({
     el: '#app',
     template: '<App/>',
