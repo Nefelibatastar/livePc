@@ -16,6 +16,7 @@ export default {
             tableData: [],
             total: 0,
             page: 1,
+            isOperate: 0,
             tableColumns: [
                 {
                     type: 'selection',
@@ -68,14 +69,15 @@ export default {
     methods: {
         mockTableData() {
             let para = {
-                page: this.page
+                isOperate: this.isOperate
             };
             this.$Loading.start();
             // 2. 改为使用全局挂载的 $api 调用
-            this.$api.getUserListPage(para).then((res) => {
-                this.$Loading.finish();
-                this.total = res.total; // 注意这里：mock返回的结构是{total, users}，之前多了一层data
-                this.tableData = res.users;
+            this.$api.getProgram(para).then((res) => {
+                console.log('11', res)
+                // this.$Loading.finish();
+                // this.total = res.total; // 注意这里：mock返回的结构是{total, users}，之前多了一层data
+                // this.tableData = res.users;
             });
         },
         show(index) {

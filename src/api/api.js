@@ -23,7 +23,7 @@ let base = '/api';
 const api = {
   // 登录相关
   requestLogin: (params) => request.post(`${base}/user/login`, params),
-  
+
   // 系统相关
   getProgram: (params) => request.get(`${base}/program/getProgram`, { params }),
   getUserListPage: (params) => request.get(`${base}/user/listpage`, { params }),

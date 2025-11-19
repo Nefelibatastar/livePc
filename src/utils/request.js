@@ -43,7 +43,7 @@ service.interceptors.response.use(
 // 封装请求方法
 const request = {
   get(url, params = {}) {
-    return service.get(url, { params })
+    return service.get(url, params )
   },
   post(url, data = {}) {
     return service.post(url, data)
