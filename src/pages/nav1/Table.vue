@@ -73,12 +73,12 @@ export default {
             };
             this.$Loading.start();
             // 2. 改为使用全局挂载的 $api 调用
-            this.$api.getProgram(para).then((res) => {
-                console.log('11', res)
+            // this.$api.getProgram(para).then((res) => {
+                // console.log('11', res)
                 // this.$Loading.finish();
                 // this.total = res.total; // 注意这里：mock返回的结构是{total, users}，之前多了一层data
                 // this.tableData = res.users;
-            });
+            // });
         },
         show(index) {
             this.$Modal.info({
