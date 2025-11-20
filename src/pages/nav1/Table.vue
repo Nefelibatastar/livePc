@@ -67,19 +67,6 @@ export default {
         }
     },
     methods: {
-        mockTableData() {
-            let para = {
-                isOperate: this.isOperate
-            };
-            this.$Loading.start();
-            // 2. 改为使用全局挂载的 $api 调用
-            // this.$api.getProgram(para).then((res) => {
-                // console.log('11', res)
-                // this.$Loading.finish();
-                // this.total = res.total; // 注意这里：mock返回的结构是{total, users}，之前多了一层data
-                // this.tableData = res.users;
-            // });
-        },
         show(index) {
             this.$Modal.info({
                 title: '用户信息',
@@ -95,7 +82,7 @@ export default {
                     this.$Loading.start();
                     let para = { id: index }
                     removeUser(para).then((res) => {
-                        self.mockTableData();
+                        // self.mockTableData();
                     });
                 }
             })
@@ -104,11 +91,11 @@ export default {
             // 这里直接更改了模拟的数据，真实使用场景应该从服务端获取数据
             console.log(row);
             this.page = row;
-            this.mockTableData();
+            // this.mockTableData();
         }
     },
     mounted() {
-        this.mockTableData();
+        // this.mockTableData();
     }
 }
 </script>

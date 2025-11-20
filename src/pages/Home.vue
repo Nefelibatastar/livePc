@@ -2,18 +2,18 @@
     <div class="layout" :class="{ 'layout-hide-text': spanLeft < 5 }">
         <Row type="flex">
             <i-col :span="spanLeft" class="layout-menu-left">
-                <Menu :mode="modeType" theme="dark" width="auto" :active-name="this.$route.path" :open-names="openNames"
+                <Menu :mode="modeType" theme="dark" width="auto" :active-name="activeName" :open-names="openNames"
                     @on-select="menuSelect" accordion>
-                    <!-- logo区域（保留） -->
+                    <!-- logo区域 -->
                     <div class="layout-logo-left">
                         <Icon type="paper-airplane" :size="logoSize" v-show="logoIsDisplay"></Icon>
                         <span class="layout-text"> Admin 管理系统</span>
                     </div>
 
-                    <!-- 动态渲染一级菜单（包含子菜单判断） -->
+                    <!-- 动态渲染一级菜单 -->
                     <template v-if="spanLeft >= 5">
                         <template v-for="menu in menuList">
-                            <!-- 有子菜单的情况：用Submenu -->
+                            <!-- 有子菜单的情况 -->
                             <Submenu v-if="menu.childrenProgramList && menu.childrenProgramList.length > 0"
                                 :key="menu.programId" :name="menu.programUrl">
                                 <template slot="title">
@@ -27,43 +27,11 @@
                                 </Menu-item>
                             </Submenu>
 
-                            <!-- 无子菜单的情况：直接用Menu-item -->
+                            <!-- 无子菜单的情况 -->
                             <Menu-item v-else :name="menu.programUrl">
                                 <Icon type="ios-menu" :size="iconSize"></Icon>
                                 <span class="layout-text">{{ menu.programName }}</span>
                             </Menu-item>
-                        </template>
-                    </template>
-                    <!-- 折叠模式（spanLeft <5）的菜单 -->
-                    <template v-if="spanLeft < 5">
-                        <template v-for="menu in menuList">
-                            <Dropdown placement="right-start" class="_dropdownList" transfer="true"
-                                @on-click="dropDown">
-                                <a href="javascript:void(0)">
-                                    <Icon type="ios-menu" class="_iconCls" :size="iconSize"></Icon>
-                                </a>
-                                <DropdownMenu slot="list">
-                                    <!-- 有子菜单的情况 -->
-                                    <template v-if="menu.childrenProgramList && menu.childrenProgramList.length > 0">
-                                        <Dropdown placement="right-start" transfer="true">
-                                            <DropdownItem>
-                                                {{ menu.programName }}
-                                                <Icon type="ios-arrow-right"></Icon>
-                                            </DropdownItem>
-                                            <DropdownMenu slot="list">
-                                                <DropdownItem v-for="child in menu.childrenProgramList"
-                                                    :key="child.programId" :name="child.programUrl">
-                                                    {{ child.programName }}
-                                                </DropdownItem>
-                                            </DropdownMenu>
-                                        </Dropdown>
-                                    </template>
-                                    <!-- 无子菜单的情况 -->
-                                    <DropdownItem v-else :name="menu.programUrl">
-                                        {{ menu.programName }}
-                                    </DropdownItem>
-                                </DropdownMenu>
-                            </Dropdown>
                         </template>
                     </template>
                 </Menu>
@@ -122,7 +90,9 @@
 export default {
     data() {
         return {
-            openNames: [this.$route.matched[0].name],
+            openNames: [], // 存储展开的菜单名
+            activeName: '', // 当前选中的菜单名
+            isOperate: 0,
             curUserName: localStorage.getItem('userName').replace(/\"/g, ""),
             modeType: "vertical",
             spanLeft: 5,
@@ -169,12 +139,32 @@ export default {
     },
     methods: {
         getMenuList() {
-            const para = { isOperate: 0 }; // 固定参数
+            const para = { isOperate: this.isOperate }; // 固定参数
             this.$api.getProgram(para)
                 .then((res) => {
                     console.log('接口返回的菜单数据：', res); // 关键：打印数据
                     if (res.code === 200) {
-                        this.menuList = res.data; // 保存数据
+                        this.menuList = res.data;
+
+                        // 菜单加载完成后处理自动展开和选中
+                        if (this.menuList && this.menuList.length > 0) {
+                            // 自动展开第一个菜单
+                            const firstMenu = this.menuList[0];
+                            this.openNames = [firstMenu.programUrl];
+
+                            // 检查第一个菜单是否有子菜单
+                            if (firstMenu.childrenProgramList && firstMenu.childrenProgramList.length > 0) {
+                                // 有子菜单，选中第一个子菜单
+                                const firstSubMenu = firstMenu.childrenProgramList[0];
+                                this.activeName = firstSubMenu.programUrl;
+                            } else {
+                                // 无子菜单，选中第一个菜单本身
+                                this.activeName = firstMenu.programUrl;
+                            }
+
+                            // 跳转到选中的菜单对应的路由
+                            this.$router.push({ path: this.activeName });
+                        }
                     } else {
                         this.$Message.error('获取菜单失败：' + res.message);
                     }
@@ -221,6 +211,7 @@ export default {
             this.$Message.info('点击了取消');
         },
         menuSelect(name) {
+            this.activeName = name;
             this.$router.push({ path: name });
         },
         dropDown(name) {

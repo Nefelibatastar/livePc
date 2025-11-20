@@ -33,6 +33,7 @@ let routes = [
         hidden: false,
         // 移除静态菜单配置（name、iconCls等，菜单由接口动态生成）
         children: [
+            { path: '', redirect: '/role', hidden: true },
             // 子页面路由（对应接口返回的programUrl）
             {
                 path: '/role', // 这就是programUrl，用于跳转的路径

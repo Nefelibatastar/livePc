@@ -66,7 +66,7 @@ export default {
                                 }
                                 this.$Message.success('登录成功!');
                                 // 跳转首页
-                                this.$router.push({ path: '/table' });
+                                this.$router.push({ path: '/role' }); 
                             } else {
                                 this.$Message.error(res.msg || '登录失败');
                             }
@@ -116,7 +116,7 @@ export default {
 
 .formLogin-title {
     text-align: center;
-    font-seze: 28px;
+    font-size: 28px;
 }
 
 .formLogin-title h3 {

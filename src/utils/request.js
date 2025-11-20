@@ -1,6 +1,9 @@
 // src/utils/request.js
 import axios from 'axios'
 import Vue from 'vue'
+import { Message } from 'iview'
+import router from '../routes'
+
 
 // 创建axios实例
 const service = axios.create({
@@ -27,7 +30,7 @@ service.interceptors.request.use(
 service.interceptors.response.use(
   response => {
     const res = response.data
-    // 根据后端约定处理响应数据
+    // 处理正常响应中的业务错误（如后端自定义code≠200）
     if (res.code !== 200) {
       console.error('接口错误:', res.msg)
       return Promise.reject(new Error(res.msg || '接口请求失败'))
@@ -36,6 +39,21 @@ service.interceptors.response.use(
   },
   error => {
     console.error('响应错误:', error)
+    // 关键：判断是否为401状态码
+    if (error.response && error.response.status === 401) {
+      // 提示登录失效
+      Message.error('登录已失效，请重新登录')
+      // 清除本地存储的token和用户信息
+      localStorage.removeItem('admin_token')
+      localStorage.removeItem('userInfo')
+      localStorage.removeItem('userName')
+      // 跳转到登录页
+      router.push('/login')
+    } else {
+      // 其他错误（如500、网络错误等）
+      Message.error('请求失败，请稍后重试')
+    }
+
     return Promise.reject(error)
   }
 )
@@ -43,7 +61,7 @@ service.interceptors.response.use(
 // 封装请求方法
 const request = {
   get(url, params = {}) {
-    return service.get(url, params )
+    return service.get(url, params)
   },
   post(url, data = {}) {
     return service.post(url, data)
