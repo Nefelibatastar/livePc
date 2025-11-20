@@ -142,28 +142,34 @@ export default {
             const para = { isOperate: this.isOperate }; // 固定参数
             this.$api.getProgram(para)
                 .then((res) => {
-                    console.log('接口返回的菜单数据：', res); // 关键：打印数据
+                    console.log('接口返回的菜单数据：', res);
                     if (res.code === 200) {
                         this.menuList = res.data;
 
-                        // 菜单加载完成后处理自动展开和选中
+                        // 关键：处理菜单路径，添加斜杠并设置展开和选中状态
                         if (this.menuList && this.menuList.length > 0) {
-                            // 自动展开第一个菜单
+                            // 处理父菜单（xitong → /xitong）
                             const firstMenu = this.menuList[0];
-                            this.openNames = [firstMenu.programUrl];
+                            const parentPath = '/' + firstMenu.programUrl; // 补全斜杠
+                            this.openNames = [parentPath]; // 设置父菜单展开
 
-                            // 检查第一个菜单是否有子菜单
+                            // 处理子菜单（role → /role）
                             if (firstMenu.childrenProgramList && firstMenu.childrenProgramList.length > 0) {
-                                // 有子菜单，选中第一个子菜单
-                                const firstSubMenu = firstMenu.childrenProgramList[0];
-                                this.activeName = firstSubMenu.programUrl;
-                            } else {
-                                // 无子菜单，选中第一个菜单本身
-                                this.activeName = firstMenu.programUrl;
-                            }
+                                const roleMenu = firstMenu.childrenProgramList.find(
+                                    child => child.programUrl === 'role' // 精准匹配角色管理
+                                );
+                                if (roleMenu) {
+                                    const childPath = '/' + roleMenu.programUrl; // 补全斜杠
+                                    this.activeName = childPath; // 设置角色管理为选中
 
-                            // 跳转到选中的菜单对应的路由
-                            this.$router.push({ path: this.activeName });
+                                    // 刷新时自动跳转到角色管理页面（如果当前不在该页面）
+                                    if (this.$route.path !== childPath) {
+                                        this.$router.push(childPath);
+                                    }
+                                }
+                            }
+                            console.log('父菜单URL：', firstMenu.programUrl);
+                            console.log('角色管理URL：', firstMenu.childrenProgramList[0].programUrl);
                         }
                     } else {
                         this.$Message.error('获取菜单失败：' + res.message);
@@ -211,8 +217,9 @@ export default {
             this.$Message.info('点击了取消');
         },
         menuSelect(name) {
-            this.activeName = name;
-            this.$router.push({ path: name });
+            const fullPath = name.startsWith('/') ? name : '/' + name;
+            this.activeName = fullPath; // 同步选中状态
+            this.$router.push({ path: fullPath });
         },
         dropDown(name) {
             this.$router.push({ path: name });
