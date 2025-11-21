@@ -142,35 +142,9 @@ export default {
             const para = { isOperate: this.isOperate }; // 固定参数
             this.$api.getProgram(para)
                 .then((res) => {
-                    console.log('接口返回的菜单数据：', res);
+                    // console.log('接口返回的菜单数据：', res);
                     if (res.code === 200) {
                         this.menuList = res.data;
-
-                        // 关键：处理菜单路径，添加斜杠并设置展开和选中状态
-                        if (this.menuList && this.menuList.length > 0) {
-                            // 处理父菜单（xitong → /xitong）
-                            const firstMenu = this.menuList[0];
-                            const parentPath = '/' + firstMenu.programUrl; // 补全斜杠
-                            this.openNames = [parentPath]; // 设置父菜单展开
-
-                            // 处理子菜单（role → /role）
-                            if (firstMenu.childrenProgramList && firstMenu.childrenProgramList.length > 0) {
-                                const roleMenu = firstMenu.childrenProgramList.find(
-                                    child => child.programUrl === 'role' // 精准匹配角色管理
-                                );
-                                if (roleMenu) {
-                                    const childPath = '/' + roleMenu.programUrl; // 补全斜杠
-                                    this.activeName = childPath; // 设置角色管理为选中
-
-                                    // 刷新时自动跳转到角色管理页面（如果当前不在该页面）
-                                    if (this.$route.path !== childPath) {
-                                        this.$router.push(childPath);
-                                    }
-                                }
-                            }
-                            console.log('父菜单URL：', firstMenu.programUrl);
-                            console.log('角色管理URL：', firstMenu.childrenProgramList[0].programUrl);
-                        }
                     } else {
                         this.$Message.error('获取菜单失败：' + res.message);
                     }

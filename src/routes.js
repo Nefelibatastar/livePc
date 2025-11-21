@@ -33,7 +33,7 @@ let routes = [
         hidden: false,
         // 移除静态菜单配置（name、iconCls等，菜单由接口动态生成）
         children: [
-            { path: '', redirect: '/role', hidden: true },
+            { path: '', redirect: '/welcome', hidden: false },
             // 子页面路由（对应接口返回的programUrl）
             {
                 path: '/role', // 这就是programUrl，用于跳转的路径
@@ -59,7 +59,7 @@ let routes = [
             { path: '/user', component: user, name: '列表' },
             { path: '/page4', component: Page4, name: '页面4' },
             { path: '/page5', component: Page5, name: '页面5' },
-            { path: '/page6', component: Page6, name: '导航三' },
+            { path: '/welcome', component: Page6, name: '欢迎使用' },
             { path: '/echarts', component: echarts, name: 'echarts' }
 
         ]

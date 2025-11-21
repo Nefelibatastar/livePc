@@ -26,7 +26,8 @@
       </div>
     </div>
     <!-- 新增角色模态框 -->
-    <Modal v-model="addModalVisible" title="新增角色" @on-ok="submitAddRole" @on-cancel="handleCancel">
+    <Modal v-model="addModalVisible" title="新增角色" @on-ok="handleSubmit" @on-cancel="handleCancel"
+      :loading="modalLoading">
       <Form ref="addRoleForm" :model="addRoleForm" :rules="addRoleRules" :label-width="100">
         <Form-item label="角色名称" prop="roleName">
           <Input v-model="addRoleForm.roleName" placeholder="请输入角色名称"></Input>
@@ -35,28 +36,15 @@
           <Input v-model="addRoleForm.remark" placeholder="请输入角色备注"></Input>
         </Form-item>
         <Form-item label="权限菜单" prop="menuIds">
-          <CheckboxGroup v-model="addRoleForm.menuIds">
-            <div v-for="menu in allMenus" :key="menu.programId" class="menu-item">
-              <!-- 递归渲染多级菜单 -->
-              <template v-if="menu.childrenProgramList && menu.childrenProgramList.length > 0">
-                <Checkbox :label="menu.programId">{{ menu.programName }}</Checkbox>
-                <div class="submenu-item">
-                  <CheckboxGroup v-model="addRoleForm.menuIds">
-                    <Checkbox 
-                      v-for="subMenu in menu.childrenProgramList" 
-                      :key="subMenu.programId" 
-                      :label="subMenu.programId"
-                    >
-                      {{ subMenu.programName }}
-                    </Checkbox>
-                  </CheckboxGroup>
-                </div>
-              </template>
-              <template v-else>
-                <Checkbox :label="menu.programId">{{ menu.programName }}</Checkbox>
-              </template>
-            </div>
-          </CheckboxGroup>
+          <!-- 使用 Element UI 的树形控件 -->
+          <div
+            style="max-height: 300px; overflow-y: auto; border: 1px solid #dcdee2; padding: 10px; border-radius: 4px;">
+            <el-tree ref="menuTree" :data="allMenus" show-checkbox node-key="id" :props="{
+              children: 'childrenProgramList',
+              label: 'programName'
+            }" :default-expand-all="true" @check="handleMenuCheck" :check-strictly="false">
+            </el-tree>
+          </div>
         </Form-item>
       </Form>
     </Modal>
@@ -79,6 +67,7 @@ export default {
       isOperate: 0,
       // 新增角色相关
       addModalVisible: false,
+      modalLoading: false, // 添加这个
       addRoleForm: {
         roleName: '',
         remark: '',
@@ -89,7 +78,24 @@ export default {
           { required: true, message: '请输入角色名称', trigger: 'blur' }
         ],
         menuIds: [
-          { required: true, message: '请至少选择一个菜单', trigger: 'change' }
+          {
+            required: true,
+            message: '请至少选择一个菜单',
+            trigger: 'change',
+            validator: (rule, value, callback) => {
+              // 获取树形控件当前的选中状态
+              if (this.$refs.menuTree) {
+                const checkedKeys = this.$refs.menuTree.getCheckedKeys();
+                if (checkedKeys.length > 0) {
+                  callback(); // 验证通过
+                } else {
+                  callback(new Error('请至少选择一个菜单')); // 验证失败
+                }
+              } else {
+                callback(new Error('菜单数据加载中，请稍后'));
+              }
+            }
+          }
         ]
       },
       allMenus: [], // 所有菜单数据
@@ -170,52 +176,151 @@ export default {
     },
     // 关闭模态框
     handleCancel() {
+      this.addRoleForm = { roleName: '', remark: '', menuIds: [] };
       this.$refs.addRoleForm.resetFields();
+      if (this.$refs.menuTree) {
+        this.$refs.menuTree.setCheckedKeys([]);
+      }
+      this.modalLoading = false; // 添加这行
     },
+    // 处理菜单勾选
+    handleMenuCheck(checkedNode, checkedKeys) {
+      // 更新表单中的menuIds，用于验证
+      this.addRoleForm.menuIds = checkedKeys.checkedKeys;
+
+      // 打印当前选中状态
+      console.log('当前选中的菜单:', checkedKeys.checkedKeys);
+      console.log('半选中的菜单:', checkedKeys.halfCheckedKeys);
+    },
+
     // 获取所有菜单（用于权限选择）
     getAllMenus() {
-      const para = { isOperate: 0 }; 
+      const para = { isOperate: 0 };
       this.$api.getProgram(para)
         .then(res => {
           if (res.code === 200) {
             this.allMenus = res.data;
+            console.log('菜单数据加载成功，结构如下：');
+            this.allMenus.forEach(menu => {
+              console.log(`一级菜单: ${menu.programName} (${menu.id})`);
+              if (menu.childrenProgramList && menu.childrenProgramList.length > 0) {
+                menu.childrenProgramList.forEach(child => {
+                  console.log(`  └─ 二级菜单: ${child.programName} (${child.id})`);
+                });
+              }
+            });
+
+            // 如果有之前选中的菜单，设置选中状态
+            this.$nextTick(() => {
+              if (this.addRoleForm.menuIds.length > 0) {
+                this.$refs.menuTree.setCheckedKeys(this.addRoleForm.menuIds);
+              }
+            });
           } else {
             this.$Message.error('获取菜单失败：' + res.message);
           }
-        })
-        .catch(err => {
-          console.error('获取菜单失败', err);
-          this.$Message.error('网络错误，请重试');
+        });
+    },
+    handleSubmit() {
+      this.modalLoading = true;
+
+      this.submitAddRole()
+        .finally(() => {
+          this.modalLoading = false;
         });
     },
     // 提交新增角色
     submitAddRole() {
-      this.$refs.addRoleForm.validate(valid => {
-        if (valid) {
-          // 构造提交参数
-          const params = {
-            roleName: this.addRoleForm.roleName,
-            remark: this.addRoleForm.remark,
-            menuIds: this.addRoleForm.menuIds.join(',') // 转为逗号分隔的字符串
-          };
+      return new Promise((resolve, reject) => {
+        this.$refs.addRoleForm.validate(valid => {
+          if (!valid) {
+            this.$Message.error('表单验证失败，请检查输入');
+            return reject();
+          }
 
-          // 调用新增角色API
-          this.$api.addRole(params)
-            .then(res => {
-              if (res.code === 200) {
-                this.$Message.success('新增角色成功');
-                this.addModalVisible = false;
-                this.getRoleList(); // 刷新角色列表
-              } else {
-                this.$Message.error('新增失败：' + res.message);
-              }
-            })
-            .catch(err => {
-              console.error('新增角色失败', err);
-              this.$Message.error('网络错误，请重试');
-            });
+          try {
+            const menuTree = this.$refs.menuTree;
+
+            // 只使用 getCheckedKeys 和 getCheckedNodes
+            const checkedKeys = menuTree.getCheckedKeys();
+            const checkedNodes = menuTree.getCheckedNodes();
+
+            console.log('选中的键:', checkedKeys);
+            console.log('选中的节点:', checkedNodes);
+
+            // 直接从选中的节点中提取所有需要提交的菜单ID
+            // 包括选中的节点和它们的父节点
+            const allMenuIds = this.getAllRequiredMenuIds(checkedNodes);
+
+            // 构造 programList
+            const programList = allMenuIds.map(programId => ({ programId }));
+
+            // 构造提交参数
+            const params = {
+              roleName: this.addRoleForm.roleName,
+              remark: this.addRoleForm.remark,
+              programList: programList
+            };
+            console.log('提交的参数内容:', JSON.stringify(params, null, 2));
+
+            this.$api.addRole(params)
+              .then(res => {
+                console.log('新增角色接口返回:', res);
+                if (res.code === 200) {
+                  this.$Message.success('新增角色成功');
+                  this.addModalVisible = false;
+                  this.getRoleList();
+                  resolve();
+                } else {
+                  // this.$Message.error(res.message || '新增失败');
+                  reject();
+                }
+              })
+          } catch (error) {
+            console.error('处理菜单数据时出错:', error);
+            this.$Message.error('处理菜单数据失败');
+            reject();
+          }
+        });
+      });
+    },
+
+    // 获取所有需要提交的菜单ID（包括父节点）
+    getAllRequiredMenuIds(checkedNodes) {
+      const menuIds = new Set();
+
+      checkedNodes.forEach(node => {
+        // 添加当前节点
+        menuIds.add(node.id);
+
+        // 如果这是二级菜单，添加对应的一级菜单
+        if (node.parentId && node.parentId !== '0') {
+          menuIds.add(node.parentId);
         }
       });
+
+      return Array.from(menuIds);
+    },
+
+    // 查找菜单的父菜单
+    findParentMenu(menuId) {
+      // 遍历一级菜单
+      for (const menu of this.allMenus) {
+        // 如果当前就是一级菜单，返回null
+        if (menu.id === menuId) {
+          return null;
+        }
+
+        // 检查二级菜单
+        if (menu.childrenProgramList && menu.childrenProgramList.length > 0) {
+          for (const childMenu of menu.childrenProgramList) {
+            if (childMenu.id === menuId) {
+              return menu; // 返回父菜单
+            }
+          }
+        }
+      }
+      return null;
     },
     showPermission(index) {
       const role = this.tableData[index];
@@ -278,6 +383,7 @@ h2 {
 .btn-group i-button {
   margin-left: 8px;
 }
+
 /* 菜单选择样式 */
 .menu-item {
   margin-bottom: 10px;
@@ -292,9 +398,31 @@ h2 {
   margin-bottom: 5px;
 }
 
-.ivu-checkbox-group {
+.el-checkbox-group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.menu-item {
+  margin-bottom: 8px;
+  padding-left: 5px;
+}
+
+.submenu-item {
+  margin-left: 25px;
+  padding-left: 10px;
+  border-left: 1px dashed #ccc;
+  margin-top: 5px;
+  margin-bottom: 5px;
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+
+/* 解决 Element UI 复选框与文字对齐问题 */
+.el-checkbox {
+  align-items: center;
+  cursor: pointer;
 }
 </style>

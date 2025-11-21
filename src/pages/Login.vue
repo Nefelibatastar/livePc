@@ -66,7 +66,7 @@ export default {
                                 }
                                 this.$Message.success('登录成功!');
                                 // 跳转首页
-                                this.$router.push({ path: '/role' }); 
+                                this.$router.push('/welcome');
                             } else {
                                 this.$Message.error(res.msg || '登录失败');
                             }

@@ -1,4 +1,3 @@
 <template>
-	<section>page6...
-	</section>
+	<h2>欢迎使用!</h2>
 </template>

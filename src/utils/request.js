@@ -32,8 +32,8 @@ service.interceptors.response.use(
     const res = response.data
     // 处理正常响应中的业务错误（如后端自定义code≠200）
     if (res.code !== 200) {
-      console.error('接口错误:', res.msg)
-      return Promise.reject(new Error(res.msg || '接口请求失败'))
+      console.error('接口错误:', res.message)
+      Message.error(res.message || '接口请求失败')
     }
     return res
   },
@@ -50,8 +50,7 @@ service.interceptors.response.use(
       // 跳转到登录页
       router.push('/login')
     } else {
-      // 其他错误（如500、网络错误等）
-      Message.error('请求失败，请稍后重试')
+      return Promise.reject(new Error(res.message || 'Error'));
     }
 
     return Promise.reject(error)
