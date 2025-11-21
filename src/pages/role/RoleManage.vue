@@ -48,6 +48,27 @@
         </Form-item>
       </Form>
     </Modal>
+    <!-- 查看权限 -->
+    <Modal v-model="showPermissionVisible" title="查看角色权限" @on-cancel="handlePermissionCancel">
+      <Form ref="permissionForm" :model="permissionForm" :label-width="100">
+        <Form-item label="角色名称">
+          <Input v-model="permissionForm.roleName" ></Input>
+        </Form-item>
+        <Form-item label="角色备注">
+          <Input v-model="permissionForm.remark" ></Input>
+        </Form-item>
+        <Form-item label="权限菜单">
+          <div
+            style="max-height: 300px; overflow-y: auto; border: 1px solid #dcdee2; padding: 10px; border-radius: 4px;">
+            <el-tree ref="viewMenuTree" :data="allMenus" show-checkbox node-key="id" :props="{
+              children: 'childrenProgramList',
+              label: 'programName'
+            }" :default-expand-all="true" :check-strictly="false" :disabled="true"> <!-- 查看时禁用选择 -->
+            </el-tree>
+          </div>
+        </Form-item>
+      </Form>
+    </Modal>
   </div>
 </template>
 <script>
@@ -72,6 +93,14 @@ export default {
         roleName: '',
         remark: '',
         menuIds: [] // 选中的菜单ID数组
+      },
+      // 查看权限相关
+      showPermissionVisible: false,
+      permissionForm: {
+        roleId: '',
+        roleName: '',
+        remark: '',
+        menuIds: []
       },
       addRoleRules: {
         roleName: [
@@ -141,7 +170,7 @@ export default {
       }
       this.$api.getRoleList(para)
         .then((res) => {
-          console.log('角色列表返回', res)
+          // console.log('角色列表返回', res)
           if (res.code === 200) {
             // 接口数据赋值
             this.tableData = res.data.records; // 角色列表数据
@@ -193,24 +222,60 @@ export default {
       console.log('半选中的菜单:', checkedKeys.halfCheckedKeys);
     },
 
-    // 获取所有菜单（用于权限选择）
-    getAllMenus() {
-      const para = { isOperate: 0 };
-      this.$api.getProgram(para)
+    // 获取角色权限
+    getRolePermission(roleId) {
+      this.$api.getRole({ roleId })
         .then(res => {
           if (res.code === 200) {
-            this.allMenus = res.data;
+            const roleInfo = res.data;
+            // 提取权限ID列表
+            if (roleInfo.programList && roleInfo.programList.length > 0) {
+              this.permissionForm.menuIds = roleInfo.programList.map(item => item.programId);
 
-            // 如果有之前选中的菜单，设置选中状态
-            this.$nextTick(() => {
-              if (this.addRoleForm.menuIds.length > 0) {
-                this.$refs.menuTree.setCheckedKeys(this.addRoleForm.menuIds);
-              }
-            });
+              // 设置树形控件的选中状态
+              this.$nextTick(() => {
+                if (this.$refs.viewMenuTree) {
+                  this.$refs.viewMenuTree.setCheckedKeys(this.permissionForm.menuIds);
+                }
+              });
+            }
           } else {
-            this.$Message.error('获取菜单失败：' + res.message);
+            this.$Message.error('获取角色权限失败：' + res.message);
           }
+        })
+        .catch(err => {
+          console.error('获取角色权限接口请求失败', err);
+          this.$Message.error('网络错误，请重试');
         });
+    },
+
+    // 关闭权限查看模态框
+    handlePermissionCancel() {
+      this.showPermissionVisible = false;
+      if (this.$refs.viewMenuTree) {
+        this.$refs.viewMenuTree.setCheckedKeys([]);
+      }
+    },
+    // 获取所有菜单（用于权限选择）
+    getAllMenus() {
+      return new Promise((resolve, reject) => {
+        const para = { isOperate: 0 };
+        this.$api.getProgram(para)
+          .then(res => {
+            if (res.code === 200) {
+              this.allMenus = res.data;
+              resolve();
+            } else {
+              this.$Message.error('获取菜单失败：' + res.message);
+              reject();
+            }
+          })
+          .catch(err => {
+            console.error('获取菜单接口报错：', err);
+            this.$Message.error('接口请求失败');
+            reject();
+          });
+      });
     },
     handleSubmit() {
       this.modalLoading = true;
@@ -315,23 +380,47 @@ export default {
     },
     showPermission(index) {
       const role = this.tableData[index];
-      // 显示角色权限信息（这里用Modal展示，可根据实际需求修改）
-      this.$Modal.info({
-        title: `【${role.roleName}】的权限`,
-        content: `
-        <div>
-          <p>角色ID：${role.roleId || '暂无'}</p>
-          <p>权限列表：${role.programList ? JSON.stringify(role.programList) : '暂无权限数据'}</p>
-        </div>
-      `,
-        render: (h) => {
-          // 也可以用VNode语法自定义更复杂的展示
-          return h('div', [
-            h('p', `角色ID：${role.roleId || '暂无'}`),
-            h('p', `权限列表：${role.programList ? JSON.stringify(role.programList) : '暂无权限数据'}`)
-          ]);
-        }
+      this.permissionForm.roleId = role.id || '';
+      this.permissionForm.roleName = role.roleName || '';
+      // 显示模态框
+      this.showPermissionVisible = true;
+
+      // 先加载所有菜单，再设置选中状态
+      this.getRole().then(() => {
+        console.log('继续执行吧')
+        //   // 提取权限ID列表
+        //   if (role.programList && role.programList.length > 0) {
+        //     this.permissionForm.menuIds = role.programList.map(item => item.programId);
+
+        //     // 设置树形控件的选中状态
+        //     this.$nextTick(() => {
+        //       if (this.$refs.viewMenuTree) {
+        //         this.$refs.viewMenuTree.setCheckedKeys(this.permissionForm.menuIds);
+        //       }
+        //     });
+        //   }
       });
+    },
+    getRole() {
+      return new Promise((resolve, reject) => {
+        let para = {
+          roleId: this.permissionForm.roleId
+        }
+        this.$api.getRole(para)
+          .then(res => {
+            if (res.code === 200) {
+              console.log('获取到了', res)
+              resolve()
+            } else {
+              this.$Message.error(res.msg);
+              reject()
+            }
+          })
+          .catch(err => {
+            console.error('获取失败:', err);
+            reject()
+          });
+      })
     },
     changePage(row) {
       this.page = row; // 更新当前页码
