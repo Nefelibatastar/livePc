@@ -39,7 +39,6 @@ service.interceptors.response.use(
   },
   error => {
     console.error('响应错误:', error)
-    // 关键：判断是否为401状态码
     if (error.response && error.response.status === 401) {
       // 提示登录失效
       Message.error('登录已失效，请重新登录')

@@ -200,15 +200,6 @@ export default {
         .then(res => {
           if (res.code === 200) {
             this.allMenus = res.data;
-            console.log('菜单数据加载成功，结构如下：');
-            this.allMenus.forEach(menu => {
-              console.log(`一级菜单: ${menu.programName} (${menu.id})`);
-              if (menu.childrenProgramList && menu.childrenProgramList.length > 0) {
-                menu.childrenProgramList.forEach(child => {
-                  console.log(`  └─ 二级菜单: ${child.programName} (${child.id})`);
-                });
-              }
-            });
 
             // 如果有之前选中的菜单，设置选中状态
             this.$nextTick(() => {

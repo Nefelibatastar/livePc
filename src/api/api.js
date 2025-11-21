@@ -15,6 +15,9 @@ const api = {
   getRoleList: (params) => request.get(`${base}/role/getRoleList`, {params}),
   // role/addRole 新增角色,并授权菜单
   addRole: (params) => request.post(`${base}/role/addRole`, params),
+  // role/getRole 根据id获取角色详情 roleId
+  getRole: (params) => request.get(`${base}/role/getRole`, {params}),
+
 };
 
 export default api;
